@@ -80,18 +80,14 @@ def parse_power_weight_ratio(soup: BeautifulSoup) -> Optional[float]:
     match = re.match(regex, p_w_r_entry)
     return float(match[1])
 
-def retrieve_page(url: str):
-    match_name = R".+/(.+)\..+"
-    name = re.match(match_name, url)[1]
-    # logger.debug(f"Retrieving page {name} from {url}...")
 
+def retrieve_page(url: str):
     r = requests.get(url)
     soup = BeautifulSoup(r.text, "html.parser")
 
     power_hp, power_kw = parse_power(soup)
     wet_weight_kg, wet_weight_lb = parse_weight(soup, "Weight incl. oil, gas, etc:")
     dry_weight_kg, dry_weight_lb = parse_weight(soup, "Dry weight:")
-
 
     entries = {"model": retrieve_entry(soup, "Model:"),
                "year": int(retrieve_entry(soup, "Year:")),
@@ -105,7 +101,6 @@ def retrieve_page(url: str):
                "dry_weight_lb": dry_weight_lb,
                "power_weight_ratio_hp_kg": parse_power_weight_ratio(soup),
                "url": url}
-    # logger.debug(entries)
     return entries
 
 
