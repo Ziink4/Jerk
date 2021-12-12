@@ -152,5 +152,5 @@ def export_data(data: List[Dict[str, str]]) -> None:
 
 if __name__ == "__main__":
     urls = parse_sitemap(SITEMAP_URL)
-    data = retrieve_data(urls[:100])
+    data = retrieve_data(urls)
     export_data(data)
