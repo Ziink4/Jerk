@@ -58,7 +58,8 @@ def parse_power(soup: BeautifulSoup) -> Tuple[Optional[float], Optional[float]]:
 
     regex = R"(.+) HP \((.+)  kW\)\).*"
     match = re.match(regex, power_entry)
-    return float(match[1]), float(match[2])
+
+    return float(match[1].replace(',', '')), float(match[2].replace(',', ''))
 
 
 def parse_weight(soup: BeautifulSoup, key_text: str) -> Tuple[Optional[float], Optional[float]]:
@@ -68,7 +69,7 @@ def parse_weight(soup: BeautifulSoup, key_text: str) -> Tuple[Optional[float], O
 
     regex = R"(.+) kg \((.+) pounds\).*"
     match = re.match(regex, weight_entry)
-    return float(match[1]), float(match[2])
+    return float(match[1].replace(',', '')), float(match[2].replace(',', ''))
 
 
 def parse_power_weight_ratio(soup: BeautifulSoup) -> Optional[float]:
@@ -78,7 +79,7 @@ def parse_power_weight_ratio(soup: BeautifulSoup) -> Optional[float]:
 
     regex = R"(.+) HP/kg"
     match = re.match(regex, p_w_r_entry)
-    return float(match[1])
+    return float(match[1].replace(',', ''))
 
 
 def retrieve_page(url: str):
