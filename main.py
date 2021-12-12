@@ -72,9 +72,18 @@ def parse_weight(soup: BeautifulSoup, key_text: str) -> Tuple[Optional[float], O
     return float(match[1].replace(',', '')), float(match[2].replace(',', ''))
 
 
-def parse_power_weight_ratio(soup: BeautifulSoup) -> Optional[float]:
+def parse_power_weight_ratio(soup: BeautifulSoup,
+                             power_hp: Optional[float],
+                             wet_weight_kg: Optional[float],
+                             dry_weight_kg: Optional[float]) -> Optional[float]:
     p_w_r_entry = retrieve_entry(soup, "Power/weight ratio:")
     if p_w_r_entry is None:
+        if power_hp:
+            if wet_weight_kg:
+                return power_hp / wet_weight_kg
+            elif dry_weight_kg:
+                return power_hp / dry_weight_kg
+
         return None
 
     regex = R"(.+) HP/kg"
@@ -100,7 +109,7 @@ def retrieve_page(url: str):
                "wet_weight_lb": wet_weight_lb,
                "dry_weight_kg": dry_weight_kg,
                "dry_weight_lb": dry_weight_lb,
-               "power_weight_ratio_hp_kg": parse_power_weight_ratio(soup),
+               "power_weight_ratio_hp_kg": parse_power_weight_ratio(soup, power_hp, wet_weight_kg, dry_weight_kg),
                "url": url}
     return entries
 
