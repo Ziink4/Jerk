@@ -16,7 +16,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 SITEMAP_URL = "https://bikez.com/sitemap/motorcycle-specs.xml"
 URL_LIST_FILENAME = "url.list"
 
-N_PROCESS = 60
+N_PROCESS = 25
 
 
 def parse_sitemap(sitemap: str) -> List[str]:
