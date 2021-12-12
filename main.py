@@ -130,6 +130,23 @@ def export_data(data: List[Dict[str, str]]) -> None:
                                         showRowStripes=True,
                                         showColumnStripes=False)
     ws.add_table(tab)
+
+    col_width = [91,   # model
+                 7,    # year
+                 12,   # power_hp
+                 12,   # power_kw
+                 45,   # torque
+                 29,   # displacement
+                 17,   # wet_weight_kg
+                 16,   # wet_weight_lb
+                 16,   # dry_weight_kg
+                 16,   # dry_weight_lb
+                 28,   # power_weight_ratio_hp_kg
+                 131]  # url
+
+    for i, column_cells in enumerate(ws.columns):
+        ws.column_dimensions[column_cells[0].column_letter].width = col_width[i]
+
     wb.save("export.xlsx")
 
 
