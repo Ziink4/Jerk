@@ -156,7 +156,7 @@ def export_data(data: List[Dict[str, str]]) -> None:
     for i, column_cells in enumerate(ws.columns):
         ws.column_dimensions[column_cells[0].column_letter].width = col_width[i]
 
-    wb.save("export.xlsx")
+    wb.save("jerk.xlsx")
 
 
 if __name__ == "__main__":
