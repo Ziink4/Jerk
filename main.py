@@ -1,6 +1,6 @@
 import os
 import re
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 
 import logzero
 from bs4 import BeautifulSoup
@@ -16,8 +16,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 SITEMAP_URL = "https://bikez.com/sitemap/motorcycle-specs.xml"
 URL_LIST_FILENAME = "url.list"
 
-N_PROCESS = 25
-
+N_PROCESS = 24
 
 def parse_sitemap(sitemap: str) -> List[str]:
     logger.info(f"Retrieving sitemap URLs...")
@@ -39,36 +38,43 @@ def parse_sitemap(sitemap: str) -> List[str]:
     return url_list
 
 
-def retrieve_entry(soup: BeautifulSoup, key_text: str):
-    key = soup.find(string=key_text)
-    if key is None:
+def retrieve_entry(soup: BeautifulSoup, key: Any) -> Optional[str]:
+    found = soup.find(["a", "b"], string=key)
+    if found is None:
         return None
 
-    if key.parent.parent.next_sibling is None:
-        # Special case for table entries that are also links
-        return key.parent.parent.parent.next_sibling.text
+    # Special case for table entries that are also links
+    if found.name == "a":
+        return found.parent.parent.parent.find_all('td')[1].text
 
-    return key.parent.parent.next_sibling.text
+    return found.parent.parent.find_all('td')[1].text
 
 
 def parse_power(soup: BeautifulSoup) -> Tuple[Optional[float], Optional[float]]:
-    power_entry = retrieve_entry(soup, "Power:")
+    power_entry = retrieve_entry(soup, re.compile(R"Power\s{2,}|Power output|Output|Effect"))
     if power_entry is None:
         return None, None
 
-    regex = R"(.+) HP \((.+)  kW\)\).*"
-    match = re.match(regex, power_entry)
+    regex = R"(.+) HP \((.+)  kW\)\)"
+    match = re.search(regex, power_entry)
+    if match is None:
+        logger.error(f"Cannot regex power: {power_entry}")
+        return None, None
 
     return float(match[1].replace(',', '')), float(match[2].replace(',', ''))
 
 
-def parse_weight(soup: BeautifulSoup, key_text: str) -> Tuple[Optional[float], Optional[float]]:
-    weight_entry = retrieve_entry(soup, key_text)
+def parse_weight(soup: BeautifulSoup, key: Any) -> Tuple[Optional[float], Optional[float]]:
+    weight_entry = retrieve_entry(soup, key)
     if weight_entry is None:
         return None, None
 
-    regex = R"(.+) kg \((.+) pounds\).*"
-    match = re.match(regex, weight_entry)
+    regex = R"(.+) kg \((.+) pounds\)"
+    match = re.search(regex, weight_entry)
+    if match is None:
+        logger.error(f"Cannot regex weight: {weight_entry}")
+        return None, None
+
     return float(match[1].replace(',', '')), float(match[2].replace(',', ''))
 
 
@@ -76,7 +82,7 @@ def parse_power_weight_ratio(soup: BeautifulSoup,
                              power_hp: Optional[float],
                              wet_weight_kg: Optional[float],
                              dry_weight_kg: Optional[float]) -> Optional[float]:
-    p_w_r_entry = retrieve_entry(soup, "Power/weight ratio:")
+    p_w_r_entry = retrieve_entry(soup, re.compile(R"Power/weight"))
     if p_w_r_entry is None:
         if power_hp:
             if wet_weight_kg:
@@ -87,20 +93,30 @@ def parse_power_weight_ratio(soup: BeautifulSoup,
         return None
 
     regex = R"(.+) HP/kg"
-    match = re.match(regex, p_w_r_entry)
+    match = re.search(regex, p_w_r_entry)
+    if match is None:
+        logger.error(f"Cannot regex p/w ratio: {p_w_r_entry}")
+        return None
+
     return float(match[1].replace(',', ''))
 
 
 def retrieve_page(url: str):
+    logzero.loglevel(logzero.CRITICAL)
     r = requests.get(url)
     soup = BeautifulSoup(r.text, "html.parser")
 
+    name = retrieve_entry(soup, re.compile(R"Model|Motorcycle name"))
+    logger.info(name)
     power_hp, power_kw = parse_power(soup)
-    wet_weight_kg, wet_weight_lb = parse_weight(soup, "Weight incl. oil, gas, etc:")
-    dry_weight_kg, dry_weight_lb = parse_weight(soup, "Dry weight:")
+    wet_weight_kg, wet_weight_lb = parse_weight(soup, re.compile(R"Weight incl. oil"))
+    dry_weight_kg, dry_weight_lb = parse_weight(soup, re.compile(R"Dry weight"))
+    year = retrieve_entry(soup, re.compile(R"\s{2,}Year|Year model|Year of manufacture|Model year"))
+    if year is not None:
+        year = int(year)
 
-    entries = {"model": retrieve_entry(soup, "Model:"),
-               "year": int(retrieve_entry(soup, "Year:")),
+    entries = {"model": name,
+               "year": year,
                "power_hp": power_hp,
                "power_kw": power_kw,
                "torque": retrieve_entry(soup, "Torque"),
@@ -160,6 +176,7 @@ def export_data(data: List[Dict[str, str]]) -> None:
 
 
 if __name__ == "__main__":
+    logzero.loglevel(logzero.CRITICAL)
     urls = parse_sitemap(SITEMAP_URL)
     data = retrieve_data(urls)
     export_data(data)
